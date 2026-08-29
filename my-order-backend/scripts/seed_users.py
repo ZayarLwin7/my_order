@@ -48,11 +48,13 @@ from app.models.rider import RiderProfile, ApplicationStatus
 
 
 # (phone, name, role, password)
+# NOTE: numbers are in a distinct block (09 7xxx) from any pre-existing
+# demo accounts (e.g. 09 01x/02x/03x) so re-seeding never collides.
 SEED_USERS = [
-    ("09011111111", "Admin User", UserRole.admin, "Password123456"),
-    ("09022222222", "Customer User", UserRole.sender, "Password123456"),
-    ("09033333333", "Rider User", UserRole.rider, "Password123456"),
-    ("09044444444", "Staff User", UserRole.staff, "Password123456"),
+    ("09711111111", "Admin Demo", UserRole.admin, "Password123456"),
+    ("09722222222", "Customer Demo", UserRole.sender, "Password123456"),
+    ("09733333333", "Rider Demo", UserRole.rider, "Password123456"),
+    ("09744444444", "Staff Demo", UserRole.staff, "Password123456"),
 ]
 
 RIDER_NRC = "12/ABC(N)123456"
@@ -66,6 +68,17 @@ def main() -> None:
         sys.exit(1)
 
     engine = create_engine(database_url, pool_pre_ping=True)
+    # Force the public schema on every connection so inserts never land in
+    # Supabase's auth.users (Supabase's default search_path can resolve an
+    # unqualified "users" to auth.users).
+    from sqlalchemy import event
+
+    @event.listens_for(engine, "connect")
+    def _set_schema(dbapi_conn, _record):
+        cur = dbapi_conn.cursor()
+        cur.execute("SET search_path TO public")
+        cur.close()
+
     Session = sessionmaker(bind=engine, expire_on_commit=False)
     session = Session()
 

@@ -91,10 +91,10 @@ Seeded accounts (password for all: `Password123456`):
 
 | Role     | Phone        | Role value |
 |----------|--------------|------------|
-| Admin    | 09011111111  | admin      |
-| Customer | 09022222222  | sender     |
-| Rider    | 09033333333  | rider      |
-| Staff    | 09044444444  | staff      |
+| Admin    | 09711111111  | admin      |
+| Customer | 09722222222  | sender     |
+| Rider    | 09733333333  | rider      |
+| Staff    | 09744444444  | staff      |
 
 The script is idempotent — re-running refreshes the password without duplicating rows.
 Requires `DATABASE_URL` (reads from `.env`).

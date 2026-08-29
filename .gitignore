@@ -1,0 +1,10 @@
+# ===== Cross-cutting ignores (monorepo root) =====
+.DS_Store
+.claude/
+
+# Downloaded archive (not source)
+my-order-backend.zip
+
+# Note: per-project ignores live in each subfolder:
+#   my-order-backend/.gitignore  -> venv/, .env, __pycache__, *.pyc, .pytest_cache/, *.db
+#   my_order_mobile/.gitignore   -> build/, .dart_tool/, .flutter-plugins*, /coverage/, etc.

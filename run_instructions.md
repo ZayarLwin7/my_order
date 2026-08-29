@@ -75,7 +75,31 @@ alembic upgrade head
 This applies all 14 migrations and creates every table
 (users, riders, orders, partners, wallets, disputes, pricing, earnings, ledgers).
 
-### 1.4 Run the API server
+### 1.4 Seed demo users (admin / customer / rider / staff)
+
+A script inserts one account per role with known credentials so you can log into
+every Flutter flavor immediately. The rider is seeded as **approved + active** so
+the rider app shows the dashboard (not the apply screen).
+
+```bash
+cd my-order-backend
+source venv/bin/activate
+python scripts/seed_users.py
+```
+
+Seeded accounts (password for all: `Password123456`):
+
+| Role     | Phone        | Role value |
+|----------|--------------|------------|
+| Admin    | 09011111111  | admin      |
+| Customer | 09022222222  | sender     |
+| Rider    | 09033333333  | rider      |
+| Staff    | 09044444444  | staff      |
+
+The script is idempotent — re-running refreshes the password without duplicating rows.
+Requires `DATABASE_URL` (reads from `.env`).
+
+### 1.5 Run the API server
 
 ```bash
 cd my-order-backend

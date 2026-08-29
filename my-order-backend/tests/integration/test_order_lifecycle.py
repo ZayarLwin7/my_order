@@ -219,6 +219,13 @@ class TestItemSizeVerification:
             headers=admin_headers,
             json={"name": "medium", "surcharge_mmk": 1000, "active": True},
         )
+        # A per-way compensation rate must exist for delivery completion
+        # (the orders router refuses 'delivered' without one).
+        client.post(
+            "/api/v1/riders/compensation-rates",
+            headers=admin_headers,
+            json={"per_completed_way_mmk": 1000, "effective_from": "2026-01-01"},
+        )
 
         from tests.conftest import create_delivery_zone
         create_delivery_zone(db_session)

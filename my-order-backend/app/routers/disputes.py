@@ -24,6 +24,12 @@ router = APIRouter(prefix="/disputes", tags=["Disputes"])
 COMPLETION_STATUSES = {OrderStatus.delivered, OrderStatus.dropped_at_terminal}
 
 
+@router.get("", response_model=list[DisputeOut])
+def list_disputes(db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    """Admin lists all disputes (newest first)."""
+    return db.query(Dispute).order_by(Dispute.created_at.desc()).all()
+
+
 @router.post("", response_model=DisputeOut, status_code=201)
 def file_dispute(payload: DisputeCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     order = db.query(Order).filter(Order.id == payload.order_id).first()

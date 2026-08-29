@@ -11,9 +11,30 @@ from app.schemas.rider import (
     RiderApplicationOut,
     RiderReviewRequest,
     ActiveRiderOut,
+    RiderSummaryOut,
 )
 
 router = APIRouter(prefix="/riders", tags=["Riders"])
+
+
+@router.get("", response_model=list[RiderSummaryOut])
+def list_riders(db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    """Admin: list all riders (application + profile status)."""
+    riders = db.query(User).filter(User.role == UserRole.rider).all()
+    summaries = []
+    for user in riders:
+        profile = db.query(RiderProfile).filter(RiderProfile.user_id == user.id).first()
+        if profile is None:
+            continue
+        summaries.append(RiderSummaryOut(
+            user_id=user.id,
+            name=user.name,
+            phone=user.phone,
+            application_status=profile.application_status,
+            active_status=profile.active_status,
+            suspended=profile.suspended,
+        ))
+    return summaries
 
 
 @router.get("/active", response_model=list[ActiveRiderOut])

@@ -36,7 +36,7 @@ class TestRiderApplication:
 
         assert response.status_code == 201
         data = response.json()
-        assert data["application_status"] == "pending"
+        assert data["status"] == "pending_review"
         assert data["nrc"] == "12/ABC(N)123456"
 
     def test_sender_cannot_apply_as_rider(self, client, sender_headers):
@@ -82,62 +82,53 @@ class TestRiderApproval:
 
     def test_admin_can_approve_rider(self, client, admin_headers, db_session):
         """Admin can approve pending rider applications."""
-        from tests.conftest import create_user
+        from tests.conftest import create_user, get_auth_headers
         from app.models.user import UserRole
-        from app.models.rider import RiderProfile, ApplicationStatus
 
-        # Create pending rider
+        # Create a rider and submit an application (so an application row exists).
         rider = create_user(db_session, phone="09555555552", role=UserRole.rider)
-        profile = RiderProfile(
-            user_id=rider.id,
-            nrc="12/ABC(N)123456",
-            license_number="LIC-123",
-            vehicle_plate="YGN-1234",
-            application_status=ApplicationStatus.pending,
-            active_status=False
+        apply_resp = client.post(
+            "/api/v1/riders/apply",
+            headers=get_auth_headers(rider),
+            json={"nrc": "12/ABC(N)123456", "license_number": "LIC-123", "vehicle_plate": "YGN-1234"},
         )
-        db_session.add(profile)
-        db_session.commit()
+        assert apply_resp.status_code == 201
+        application_id = apply_resp.json()["id"]
 
-        # Approve
+        # Approve via admin endpoint (keyed on the application id)
         response = client.patch(
-            f"/api/v1/riders/{rider.id}/approve",
+            f"/api/v1/riders/{application_id}/approve",
             headers=admin_headers,
-            json={"approved": True}
+            json={},
         )
 
         assert response.status_code == 200
         data = response.json()
-        assert data["application_status"] == "approved"
-        assert data["active_status"] is True
+        assert data["status"] == "approved"
 
     def test_admin_can_reject_rider(self, client, admin_headers, db_session):
         """Admin can reject rider applications."""
-        from tests.conftest import create_user
+        from tests.conftest import create_user, get_auth_headers
         from app.models.user import UserRole
-        from app.models.rider import RiderProfile, ApplicationStatus
 
         rider = create_user(db_session, phone="09555555553", role=UserRole.rider)
-        profile = RiderProfile(
-            user_id=rider.id,
-            nrc="12/ABC(N)123456",
-            license_number="LIC-123",
-            vehicle_plate="YGN-1234",
-            application_status=ApplicationStatus.pending,
-            active_status=False
+        apply_resp = client.post(
+            "/api/v1/riders/apply",
+            headers=get_auth_headers(rider),
+            json={"nrc": "12/ABC(N)123456", "license_number": "LIC-123", "vehicle_plate": "YGN-1234"},
         )
-        db_session.add(profile)
-        db_session.commit()
+        assert apply_resp.status_code == 201
+        application_id = apply_resp.json()["id"]
 
         response = client.patch(
-            f"/api/v1/riders/{rider.id}/approve",
+            f"/api/v1/riders/{application_id}/reject",
             headers=admin_headers,
-            json={"approved": False}
+            json={},
         )
 
         assert response.status_code == 200
         data = response.json()
-        assert data["application_status"] == "rejected"
+        assert data["status"] == "rejected"
 
     def test_sender_cannot_approve_rider(self, client, sender_headers, db_session):
         """Senders cannot approve riders."""
@@ -158,13 +149,13 @@ class TestRiderApproval:
         """Admin can list all riders."""
         response = client.get(
             "/api/v1/riders",
-            headers=admin_headers
+            headers=admin_headers,
         )
 
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
-        assert len(data) >= 1  # At least our fixture rider
+        assert any(d["user_id"] == str(rider.id) for d in data)
 
 
 class TestRiderSuspension:
@@ -209,28 +200,31 @@ class TestRiderSuspension:
 class TestItemSizeVerification:
     """Test rider item size verification."""
 
-    def test_rider_can_verify_item_size(self, client, sender_headers, rider, rider_headers, admin_headers):
+    def test_rider_can_verify_item_size(self, client, sender_headers, rider, rider_headers, admin_headers, db_session):
         """Rider can verify item size on assigned order."""
-        # Create item size rate
+        from tests.conftest import create_delivery_zone
+        create_delivery_zone(db_session)
+
+        # Create item size rate (correct admin endpoint)
         client.post(
-            "/api/v1/pricing/item-sizes",
+            "/api/v1/admin/item-size-rates",
             headers=admin_headers,
-            json={"name": "Medium", "surcharge_mmk": 1000, "active": True}
+            json={"name": "Medium", "surcharge_mmk": 1000, "active": True},
         )
 
         # Create and assign order
         quote_response = client.post(
-            "/api/v1/pricing/quotes",
+            "/api/v1/quotes",
             headers=sender_headers,
             json={
                 "delivery_mode": "door_to_door",
-                "pickup_lat": 16.8409,
-                "pickup_lng": 96.1735,
+                "destination_city": "Yangon",
+                "destination_township": "kamayut",
                 "dropoff_address": "Test",
                 "dropoff_lat": 16.8500,
                 "dropoff_lng": 96.1800,
-                "fee_payer": "sender"
-            }
+                "fee_payer": "sender",
+            },
         )
         quote = quote_response.json()
 
@@ -247,8 +241,8 @@ class TestItemSizeVerification:
                 "item_value": 50000,
                 "cod_amount": 0,
                 "authorized_max_fee_mmk": quote["maximum_fee_mmk"],
-                "terms_accepted": True
-            }
+                "terms_accepted": True,
+            },
         )
         order = order_response.json()
 
@@ -256,14 +250,14 @@ class TestItemSizeVerification:
         client.patch(
             f"/api/v1/orders/{order['id']}/assign",
             headers=admin_headers,
-            json={"rider_id": str(rider.id)}
+            json={"rider_id": str(rider.id)},
         )
 
-        # Rider verifies item size
+        # Rider verifies item size (case-insensitive match in backend)
         response = client.patch(
             f"/api/v1/orders/{order['id']}/verify-item-size",
             headers=rider_headers,
-            json={"item_size": "Medium"}
+            json={"item_size": "Medium"},
         )
 
         assert response.status_code == 200
@@ -271,21 +265,25 @@ class TestItemSizeVerification:
         assert data["item_size"] == "Medium"
         assert float(data["delivery_fee"]) > float(quote["estimated_fee_mmk"])  # Has surcharge
 
-    def test_sender_cannot_verify_item_size(self, client, sender_headers, rider, admin_headers):
+    def test_sender_cannot_verify_item_size(self, client, sender_headers, rider, admin_headers, db_session):
         """Senders cannot verify item size."""
         # Create order and assign
+        from tests.conftest import create_delivery_zone
+        create_delivery_zone(db_session)
         quote_response = client.post(
-            "/api/v1/pricing/quotes",
+            "/api/v1/quotes",
             headers=sender_headers,
             json={
                 "delivery_mode": "door_to_door",
+                "destination_city": "Yangon",
+                "destination_township": "kamayut",
+                "dropoff_address": "Test",
                 "pickup_lat": 16.8409,
                 "pickup_lng": 96.1735,
-                "dropoff_address": "Test",
                 "dropoff_lat": 16.8500,
                 "dropoff_lng": 96.1800,
-                "fee_payer": "sender"
-            }
+                "fee_payer": "sender",
+            },
         )
         quote = quote_response.json()
 

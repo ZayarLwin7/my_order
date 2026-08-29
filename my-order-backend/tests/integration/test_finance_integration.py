@@ -47,9 +47,9 @@ class TestDisputeFlow:
             headers=sender_headers,
             json={
                 "order_id": "550e8400-e29b-41d4-a716-446655440000",
-                "reason": "Item was damaged",
-                "description": "Package arrived damaged"
-            }
+                "reason": "damaged",
+                "description": "Package arrived damaged",
+            },
         )
 
         # Order doesn't exist, should get 404

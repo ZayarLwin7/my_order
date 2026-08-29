@@ -30,3 +30,16 @@ class ActiveRiderOut(BaseModel):
     user_id: uuid.UUID
     name: str
     phone: str
+
+
+class RiderSummaryOut(BaseModel):
+    """Admin list-view summary for a rider (application + profile state)."""
+    user_id: uuid.UUID
+    name: str
+    phone: str
+    application_status: ApplicationStatus
+    active_status: bool
+    suspended: bool
+
+    class Config:
+        from_attributes = True

@@ -153,7 +153,7 @@ class TestLogin:
     def test_token_works_for_protected_route(self, client, sender_headers):
         """Valid token should access protected routes."""
         response = client.get(
-            "/api/v1/pricing/quotes",
+            "/api/v1/quotes",
             headers=sender_headers
         )
 

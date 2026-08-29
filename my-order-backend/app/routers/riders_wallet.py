@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.dependencies import get_db, require_admin
-from app.models.user import User
+from app.dependencies import get_current_user, get_db, require_admin
+from app.models.user import User, UserRole
 from app.models.rider import RiderProfile
 from app.models.order import Order, OrderStatus
 from app.models.wallet import RiderRemittanceAllocation, WalletTransaction, TransactionType
@@ -21,6 +21,39 @@ from app.schemas.wallet import (
 from app.config import settings
 
 router = APIRouter(prefix="/riders", tags=["Rider Wallet"])
+
+
+@router.get("/me/wallet", response_model=WalletOut)
+def get_my_wallet(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Rider views their own wallet balance."""
+    if current_user.role != UserRole.rider:
+        raise HTTPException(status_code=403, detail="Only rider accounts can view a rider wallet")
+    profile = db.query(RiderProfile).filter(RiderProfile.user_id == current_user.id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Rider profile not found")
+    return WalletOut(
+        rider_user_id=current_user.id,
+        wallet_balance=profile.wallet_balance,
+        active_status=profile.active_status,
+        suspended=profile.suspended,
+        alert=float(profile.wallet_balance) >= settings.wallet_alert_threshold,
+    )
+
+
+@router.get("/me/wallet/transactions", response_model=list[WalletTransactionOut])
+def get_my_wallet_transactions(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Rider views their own wallet transactions."""
+    if current_user.role != UserRole.rider:
+        raise HTTPException(status_code=403, detail="Only rider accounts can view a rider wallet")
+    profile = db.query(RiderProfile).filter(RiderProfile.user_id == current_user.id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Rider profile not found")
+    return (
+        db.query(WalletTransaction)
+        .filter(WalletTransaction.rider_user_id == current_user.id)
+        .order_by(WalletTransaction.created_at.desc())
+        .all()
+    )
 
 
 @router.get("/{rider_user_id}/wallet", response_model=WalletOut)

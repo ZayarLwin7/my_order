@@ -99,6 +99,37 @@ Seeded accounts (password for all: `Password123456`):
 The script is idempotent — re-running refreshes the password without duplicating rows.
 Requires `DATABASE_URL` (reads from `.env`).
 
+### 1.4b Seed reference data (delivery zone, item-size rate, compensation rate)
+
+The full order lifecycle also needs reference data, otherwise quoting and
+delivery fail:
+
+- a delivery zone (so door-to-door quotes resolve a township surcharge),
+- an active item-size rate (so item-size verification has a rate to apply),
+- a rider compensation rate (the backend refuses to mark an order `delivered`
+  without one — it needs to know what to pay the rider).
+
+```bash
+cd my-order-backend
+source venv/bin/activate
+python scripts/seed_reference_data.py
+```
+
+This inserts (idempotently):
+
+| Table | Seed |
+|-------|------|
+| `delivery_zones` | Yangon / Kamayut, surcharge 500 MMK, active |
+| `item_size_rates` | "medium", surcharge 1000 MMK, active |
+| `rider_compensation_rates` | 2000 MMK per completed way, effective 2026-01-01 |
+
+After both seed scripts, the app's happy path works end-to-end:
+register/seed users → request quote → create order → admin assign →
+rider verify item size → sender confirm fee → rider update status to delivered.
+
+> Supabase note: the scripts force `search_path = public` so data always lands
+> in your app's `public` schema, never Supabase Auth's `auth.users`.
+
 ### 1.5 Run the API server
 
 ```bash

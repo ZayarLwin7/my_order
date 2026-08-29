@@ -8,12 +8,13 @@ import '../storage/secure_storage.dart';
 ///
 /// Platform-aware defaults:
 /// - Web (admin dashboard) -> localhost (runs on the same machine as backend)
-/// - Android emulator       -> 10.0.2.2 (host loopback alias)
+/// - Android emulator       -> 127.0.0.1 (requires `adb reverse tcp:8000 tcp:8000`
+///                              to tunnel to the host, bypassing the macOS firewall)
 /// - iOS simulator/desktop  -> localhost
 /// - Physical device        -> override with --dart-define=API_BASE_URL=http://your-mac-lan-ip:8000/api/v1
 const String _kDefaultBaseUrl = kIsWeb
     ? 'http://localhost:8000/api/v1'
-    : 'http://10.0.2.2:8000/api/v1';
+    : 'http://127.0.0.1:8000/api/v1';
 
 const String kApiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',

@@ -94,6 +94,17 @@ def list_zones(db: Session = Depends(get_db), admin: User = Depends(require_admi
     return db.query(DeliveryZone).order_by(DeliveryZone.city, DeliveryZone.township).all()
 
 
+@router.get("/delivery-zones", response_model=list[DeliveryZoneOut])
+def list_active_zones(db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    """Public (authenticated) list of ACTIVE delivery zones for the order wizard."""
+    return (
+        db.query(DeliveryZone)
+        .filter(DeliveryZone.active.is_(True))
+        .order_by(DeliveryZone.city, DeliveryZone.township)
+        .all()
+    )
+
+
 @router.put("/admin/delivery-zones/{zone_id}", response_model=DeliveryZoneOut)
 def update_zone(zone_id: uuid.UUID, payload: DeliveryZoneUpsert, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
     zone = db.query(DeliveryZone).filter(DeliveryZone.id == zone_id).first()

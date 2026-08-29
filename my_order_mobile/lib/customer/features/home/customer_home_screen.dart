@@ -6,6 +6,7 @@ import '../../../core/auth/auth_provider.dart';
 import '../../../core/auth/user.dart';
 import '../../../core/theme/spacing.dart';
 import '../../../core/widgets/mo_card.dart';
+import '../order/create_order_wizard.dart';
 
 /// Customer app home (P1).
 class CustomerHomeScreen extends ConsumerWidget {
@@ -55,7 +56,14 @@ class CustomerHomeScreen extends ConsumerWidget {
               const SizedBox(height: MOSpacing.lg),
 
               // Primary action card
-              _NewOrderCard(brandColor: config.brandColor),
+              _NewOrderCard(
+                brandColor: config.brandColor,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const CreateOrderWizard(),
+                  ),
+                ),
+              ),
 
               const SizedBox(height: MOSpacing.xl),
 
@@ -158,12 +166,16 @@ class _PartnerBanner extends StatelessWidget {
 /// Big "New Order" action card.
 class _NewOrderCard extends StatelessWidget {
   final Color brandColor;
-  const _NewOrderCard({required this.brandColor});
+  final VoidCallback onTap;
+  const _NewOrderCard({required this.brandColor, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(MORadius.xl),
+      child: Container(
       padding: const EdgeInsets.all(MOSpacing.lg),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -200,6 +212,7 @@ class _NewOrderCard extends StatelessWidget {
                 color: Colors.white, size: 30),
           ),
         ],
+      ),
       ),
     );
   }

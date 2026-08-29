@@ -7,15 +7,16 @@ import 'spacing.dart';
 class MOTheme {
   MOTheme._();
 
-  static ThemeData light() => _build(Brightness.light);
+  static ThemeData light([Color? brandColor]) => _build(Brightness.light, brandColor);
 
-  static ThemeData dark() => _build(Brightness.dark);
+  static ThemeData dark([Color? brandColor]) => _build(Brightness.dark, brandColor);
 
-  static ThemeData _build(Brightness brightness) {
+  static ThemeData _build(Brightness brightness, [Color? brandColor]) {
+    final brand = brandColor ?? MOColors.primary;
     final isDark = brightness == Brightness.dark;
     final scheme = ColorScheme.fromSeed(
-      seedColor: MOColors.primary,
-      primary: MOColors.primary,
+      seedColor: brand,
+      primary: brand,
       brightness: brightness,
       surface: isDark ? MOColors.surfaceDark : MOColors.cardLight,
     );
@@ -104,7 +105,7 @@ class MOTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(MORadius.md),
-          borderSide: const BorderSide(color: MOColors.primary, width: 1.5),
+          borderSide: BorderSide(color: brand, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(MORadius.md),
@@ -148,7 +149,7 @@ class MOTheme {
       ),
 
       progressIndicatorTheme: ProgressIndicatorThemeData(
-        color: MOColors.primary,
+        color: brand,
         linearTrackColor: isDark ? Colors.white12 : MOColors.borderLight,
       ),
     );

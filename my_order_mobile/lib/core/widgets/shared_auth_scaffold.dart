@@ -22,8 +22,8 @@ class FlavorApp extends ConsumerWidget {
     return MaterialApp(
       title: config.appName,
       debugShowCheckedModeBanner: false,
-      theme: MOTheme.light(),
-      darkTheme: MOTheme.dark(),
+      theme: MOTheme.light(config.brandColor),
+      darkTheme: MOTheme.dark(config.brandColor),
       home: _AuthGate(config: config, homeBuilder: homeBuilder),
     );
   }
